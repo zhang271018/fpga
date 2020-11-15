@@ -1,0 +1,8 @@
+21:11:46 **** Incremental Build of configuration Debug for project transdata ****
+make pre-build main-build 
+a9-linaro-pre-build-step
+' '
+make: Nothing to be done for 'main-build'.
+
+21:11:46 Build Finished (took 271ms)
+

@@ -1,0 +1,7 @@
+c_addsub_v12_0_vh_rfs.vhd,vhdl,c_addsub_v12_0_13,../../../ipstatic/hdl/c_addsub_v12_0_vh_rfs.vhd,
+c_shift_ram_v12_0_vh_rfs.vhd,vhdl,c_shift_ram_v12_0_13,../../../ipstatic/hdl/c_shift_ram_v12_0_vh_rfs.vhd,
+mult_gen_v12_0_vh_rfs.vhd,vhdl,mult_gen_v12_0_15,../../../ipstatic/hdl/mult_gen_v12_0_vh_rfs.vhd,
+cmpy_v6_0_vh_rfs.vhd,vhdl,cmpy_v6_0_17,../../../ipstatic/hdl/cmpy_v6_0_vh_rfs.vhd,
+floating_point_v7_0_vh_rfs.vhd,vhdl,floating_point_v7_0_16,../../../ipstatic/hdl/floating_point_v7_0_vh_rfs.vhd,
+xfft_v9_1_vh_rfs.vhd,vhdl,xfft_v9_1_2,../../../ipstatic/hdl/xfft_v9_1_vh_rfs.vhd,
+ifft_1.vhd,vhdl,xil_defaultlib,../../../../V1.3.srcs/sources_1/ip/ifft_1/sim/ifft_1.vhd,

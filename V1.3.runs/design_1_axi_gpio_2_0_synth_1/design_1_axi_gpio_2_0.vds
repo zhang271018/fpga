@@ -1,0 +1,14 @@
+#-----------------------------------------------------------
+# Vivado v2019.1 (64-bit)
+# SW Build 2552052 on Fri May 24 14:49:42 MDT 2019
+# IP Build 2548770 on Fri May 24 18:01:18 MDT 2019
+# Start of session at: Sat Nov 14 19:10:32 2020
+# Process ID: 17308
+# Current directory: D:/Users/paste/V1.3.runs/design_1_axi_gpio_2_0_synth_1
+# Command line: vivado.exe -log design_1_axi_gpio_2_0.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source design_1_axi_gpio_2_0.tcl
+# Log file: D:/Users/paste/V1.3.runs/design_1_axi_gpio_2_0_synth_1/design_1_axi_gpio_2_0.vds
+# Journal file: D:/Users/paste/V1.3.runs/design_1_axi_gpio_2_0_synth_1\vivado.jou
+#-----------------------------------------------------------
+source design_1_axi_gpio_2_0.tcl -notrace
+INFO: [IP_Flow 19-4838] Using cached IP synthesis design for IP design_1_axi_gpio_2_0, cache-ID = 93d7325705201d59.
+INFO: [Common 17-206] Exiting Vivado at Sat Nov 14 19:10:39 2020...

@@ -1,0 +1,332 @@
+/* ------------------------------------------------------------ */
+/*				Include File Definitions						*/
+/* ------------------------------------------------------------ */
+
+#include "xparameters.h"
+#include <stdio.h>
+#include "xil_printf.h"
+#include "sleep.h"
+#include "xscugic.h"
+#include "uart_parameter.h"
+#include "xgpio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "platform.h"
+
+#define UART_DEVICE_ID      XPAR_XUARTPS_0_DEVICE_ID
+#define INTC_DEVICE_ID		XPAR_SCUGIC_SINGLE_DEVICE_ID
+#define UART_INT_IRQ_ID		XPAR_XUARTPS_0_INTR
+
+/* Statement */
+#define UART_TX      0
+#define UART_RXCHECK 1
+#define UART_WAIT    2
+
+/* maximum receiver length */
+#define MAX_LEN    200
+
+//GPIO gpio3为PL端口输出
+#define GPIO_EXAMPLE_DEVICE_ID  XPAR_GPIO_0_DEVICE_ID
+#define GPIO_EXAMPLE1_DEVICE_ID XPAR_GPIO_1_DEVICE_ID
+#define GPIO_EXAMPLE2_DEVICE_ID XPAR_GPIO_2_DEVICE_ID
+#define GPIO_EXAMPLE3_DEVICE_ID XPAR_GPIO_3_DEVICE_ID
+#define LED_DELAY     10000000
+
+#define LED_CHANNEL 1
+
+#ifdef PRE_2_00A_APPLICATION
+
+#define XGpio_SetDataDirection(InstancePtr, DirectionMask) \
+        XGpio_SetDataDirection(InstancePtr, LED_CHANNEL, DirectionMask)
+
+#define XGpio_DiscreteRead(InstancePtr) \
+        XGpio_DiscreteRead(InstancePtr, LED_CHANNEL)
+
+#define XGpio_DiscreteWrite(InstancePtr, Mask) \
+        XGpio_DiscreteWrite(InstancePtr, LED_CHANNEL, Mask)
+
+#define XGpio_DiscreteSet(InstancePtr, Mask) \
+        XGpio_DiscreteSet(InstancePtr, LED_CHANNEL, Mask)
+
+#endif
+/************************** Variable Definitions *****************************/
+
+XUartPs Uart_PS;		/* Instance of the UART Device */
+XScuGic IntcInstPtr ;
+XGpio Gpio;
+XGpio Gpio2;
+XGpio Gpio3;
+XGpio Gpio4;
+/* UART receiver buffer */
+u8 ReceivedBuffer[MAX_LEN] ;
+/* UART receiver buffer pointer*/
+u8 *ReceivedBufferPtr ;
+/* UART receiver byte number */
+volatile u32 ReceivedByteNum ;
+
+volatile u32 ReceivedFlag  ;
+
+u8 ReceivedCount=0;
+char UX_RX_BUFF[42]={0};
+char UX_RX_BUFF1[14]={0};
+char UX_RX_BUFF2[14]={0};
+char UX_RX_BUFF3[14]={0};
+long BUFF1;
+long BUFF2;
+long BUFF3;
+/*
+ * Function declaration
+ */
+int UartPsSend(XUartPs *InstancePtr, u8 *BufferPtr, u32 NumBytes) ;
+int UartPsRev (XUartPs *InstancePtr, u8 *BufferPtr, u32 NumBytes) ;
+
+int  SetupInterruptSystem(XScuGic *GicInstancePtr,XUartPs *UartInstancePtr, u16 UartIntrId);
+void Handler(void *CallBackRef);
+
+
+void mDelay(unsigned int Delay)    //Delay = 1000 时间为1S
+{
+    unsigned int i;
+    for(;Delay>0;Delay--)
+   {
+       for(i=0;i<2048;i++)
+       {;}
+
+   }
+}
+
+int main(void)
+{
+
+	int Status;
+	int Status_0;
+	int Status_1;
+	int Status_2;
+	XUartPs_Config *Config;
+	ReceivedBufferPtr = ReceivedBuffer ;
+
+	ReceivedFlag = 0 ;
+	ReceivedByteNum = 0 ;
+
+	Config = XUartPs_LookupConfig(UART_DEVICE_ID);
+	if (NULL == Config) {
+		return XST_FAILURE;
+		printf("XST_FAILURE\r\n");
+	}
+	Status = XUartPs_CfgInitialize(&Uart_PS, Config, Config->BaseAddress);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+		printf("XST_FAILURE\r\n");
+	}
+	/* Use Normal mode. */
+	XUartPs_SetOperMode(&Uart_PS, XUARTPS_OPER_MODE_NORMAL);
+	/* Set uart mode Baud Rate 115200, 8bits, no parity, 1 stop bit */
+	XUartPs_SetDataFormat(&Uart_PS, &UartFormat) ;
+	/*Set receiver FIFO interrupt trigger level, here set to 1*/
+	XUartPs_SetFifoThreshold(&Uart_PS,1) ;
+	/* Enable the receive FIFO trigger level interrupt and empty interrupt for the device */
+	XUartPs_SetInterruptMask(&Uart_PS,XUARTPS_IXR_RXOVR|XUARTPS_IXR_RXEMPTY);
+
+
+	SetupInterruptSystem(&IntcInstPtr, &Uart_PS, UART_INT_IRQ_ID) ;
+	Status_0 = XGpio_Initialize(&Gpio, GPIO_EXAMPLE_DEVICE_ID);
+	Status_1=XGpio_Initialize(&Gpio2, GPIO_EXAMPLE1_DEVICE_ID);
+	Status_2=XGpio_Initialize(&Gpio3, GPIO_EXAMPLE2_DEVICE_ID);
+
+	     	if (Status_0 != XST_SUCCESS) {
+	     		xil_printf("Gpio Initialization Failed\r\n");
+	     		return XST_FAILURE;
+	     	}
+
+	     	/* Set the direction for all signals as inputs except the LED output */
+	     	XGpio_SetDataDirection(&Gpio, 1, 0x00000000);
+	     	XGpio_SetDataDirection(&Gpio2, 1, 0x00000000);
+	     	XGpio_SetDataDirection(&Gpio3, 1, 0x00000000);
+	 while(1)
+	 {
+	 }
+}
+
+
+
+int SetupInterruptSystem(XScuGic *IntcInstancePtr,	XUartPs *UartInstancePtr, u16 UartIntrId)
+{
+	int Status;
+	/* Configuration for interrupt controller */
+	XScuGic_Config *IntcConfig;
+
+	/* Initialize the interrupt controller driver */
+	IntcConfig = XScuGic_LookupConfig(INTC_DEVICE_ID);
+	if (NULL == IntcConfig) {
+		return XST_FAILURE;
+	}
+
+	Status = XScuGic_CfgInitialize(IntcInstancePtr, IntcConfig,
+			IntcConfig->CpuBaseAddress);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+
+	/*
+	 * Connect the interrupt controller interrupt handler to the
+	 * hardware interrupt handling logic in the processor.
+	 */
+	Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+			(Xil_ExceptionHandler) XScuGic_InterruptHandler,
+			IntcInstancePtr);
+
+
+	Status = XScuGic_Connect(IntcInstancePtr, UartIntrId,
+			(Xil_ExceptionHandler) Handler,
+			(void *) UartInstancePtr);
+	if (Status != XST_SUCCESS) {
+		return XST_FAILURE;
+	}
+
+	XScuGic_Enable(IntcInstancePtr, UartIntrId);
+	Xil_ExceptionEnable();
+
+	return Status ;
+}
+void Handler(void *CallBackRef)
+{
+	XUartPs *UartInstancePtr = (XUartPs *) CallBackRef ;
+	u32 UartSrValue ;
+	u32 CsrRegister;
+	u32 IsrStatus;
+	int i;
+	UartSrValue = XUartPs_ReadReg(UartInstancePtr->Config.BaseAddress, XUARTPS_SR_OFFSET) & (XUARTPS_IXR_RXOVR|XUARTPS_IXR_RXEMPTY);
+	ReceivedFlag = 0 ;
+		IsrStatus = XUartPs_ReadReg(UartInstancePtr->Config.BaseAddress,
+					XUARTPS_IMR_OFFSET);//e0001000+10=regaddr=e0001010  设置中断未屏蔽 进入中断时  0x00000003
+		IsrStatus &= XUartPs_ReadReg(UartInstancePtr->Config.BaseAddress,
+					 XUARTPS_ISR_OFFSET);//e0001000+14=regaddr=e0001014  监测有无终端中断发生 、   0x00000001
+	if (UartSrValue & XUARTPS_IXR_RXOVR)   /* check if receiver FIFO trigger */
+	{
+		CsrRegister = XUartPs_ReadReg(UartInstancePtr->Config.BaseAddress,//判断FIFO触发标准位
+							XUARTPS_SR_OFFSET);//e0001000+2c=regaddr=e000102c
+		while((CsrRegister & XUARTPS_SR_RXEMPTY)== (u32)0)////接收FIFO非空为0
+		{
+			UX_RX_BUFF[ReceivedCount]=XUartPs_ReadReg(UartInstancePtr->Config.BaseAddress,XUARTPS_FIFO_OFFSET);//读取FIFO中的值，记录接收的数据
+			ReceivedCount++;
+			CsrRegister = XUartPs_ReadReg(UartInstancePtr->Config.BaseAddress,
+							XUARTPS_SR_OFFSET);//读取监测FIFO的状态寄存器
+
+		}
+		ReceivedByteNum=ReceivedCount;
+		while(ReceivedCount>41)
+			 {
+				for(i=0;i<14;i++)
+				{
+					UX_RX_BUFF1[i]=UX_RX_BUFF[i];
+					UX_RX_BUFF2[i]=UX_RX_BUFF[i+14];
+					UX_RX_BUFF3[i]=UX_RX_BUFF[i+28];
+				}
+				BUFF1 = strtol(UX_RX_BUFF1, NULL, 2);
+				BUFF2 = strtol(UX_RX_BUFF2, NULL, 2);
+				BUFF3 =  strtol(UX_RX_BUFF3, NULL, 2);
+				XGpio_DiscreteWrite(&Gpio, LED_CHANNEL,BUFF1);
+				XGpio_DiscreteWrite(&Gpio2, LED_CHANNEL,BUFF2);
+				XGpio_DiscreteWrite(&Gpio3, LED_CHANNEL,BUFF3);
+
+				ReceivedCount=0;
+				mDelay(10000);
+				mDelay(10000);
+				PLdata();
+
+			 }
+//		x = strtol( UX_RX_BUFF, NULL, 2 );
+//		XGpio_DiscreteWrite(&Gpio, LED_CHANNEL, x);
+//		UartPsSend(&Uart_PS,UX_RX_BUFF,ReceivedByteNum);//将接收到的数据发送给串口
+		//UartPsSend(&Uart_PS,&ReceivedCount,1);
+		//printf("%s",ReceivedCount);
+
+		XUartPs_WriteReg(UartInstancePtr->Config.BaseAddress, XUARTPS_ISR_OFFSET, XUARTPS_IXR_RXOVR) ;//清除中断
+
+	}
+}
+void PLdata()
+{
+	int data1;
+	int Status1,Status2,Status3;
+	u32 t1;
+	int i;
+	int x,y,z;
+	char string[32]={0};
+	init_platform();//初始化电路
+	Status1 = XGpio_Initialize(&Gpio4, XPAR_AXI_GPIO_3_DEVICE_ID);//GPIO2设为输入
+	XGpio_SetDataDirection(&Gpio4, 1, 0xffffffff);
+	data1=(XGpio_DiscreteRead(&Gpio4, 1));
+	if((data1&0x20000000)==0x00000000)
+	{
+		x=(data1>>20)&0x000001ff;
+	}
+	else
+	{
+		x=(data1>>20)|0xfffffc00;
+	}
+	if((data1&0x00080000)==0x00000000)
+	{
+		y=((data1<<12)>>22)&0x000001ff;
+	}
+	else
+	{
+		y=(data1>>10)|0xfffffc00;
+	}
+	if((data1&0x0000000200)==0x00000000)
+	{
+		z=((data1<<22)>>22)&0x000001ff;
+	}
+	else
+	{
+		z=data1|0xfffffc00;
+	}
+	mDelay(10000);
+	mDelay(10000);
+	mDelay(10000);
+	mDelay(10000);
+	mDelay(10000);
+	mDelay(10000);
+	UartPsSend(&Uart_PS,&x,4);
+	UartPsSend(&Uart_PS,&y,4);
+	UartPsSend(&Uart_PS,&z,4);
+	cleanup_platform();
+}
+int UartPsSend(XUartPs *InstancePtr, u8 *BufferPtr, u32 NumBytes)
+{
+
+	u32 SentCount = 0U;
+
+	/* Setup the buffer parameters */
+	InstancePtr->SendBuffer.RequestedBytes = NumBytes;
+	InstancePtr->SendBuffer.RemainingBytes = NumBytes;
+	InstancePtr->SendBuffer.NextBytePtr = BufferPtr;
+
+
+	while (InstancePtr->SendBuffer.RemainingBytes > SentCount)
+	{
+		/* Fill the FIFO from the buffer */
+		if (!XUartPs_IsTransmitFull(InstancePtr->Config.BaseAddress))
+		{
+			XUartPs_WriteReg(InstancePtr->Config.BaseAddress,
+					XUARTPS_FIFO_OFFSET,
+					((u32)InstancePtr->SendBuffer.
+							NextBytePtr[SentCount]));
+
+			/* Increment the send count. */
+			SentCount++;
+		}
+	}
+
+	/* Update the buffer to reflect the bytes that were sent from it */
+	InstancePtr->SendBuffer.NextBytePtr += SentCount;
+	InstancePtr->SendBuffer.RemainingBytes -= SentCount;
+
+
+	return SentCount;
+}
+
+
+
+
+
